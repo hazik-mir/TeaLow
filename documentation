@@ -1,0 +1,168 @@
+TeaLow Documentation
+=====================
+
+TeaLow is a unified AI SDK for Python that lets you use Google Gemini, OpenAI, 
+Anthropic Claude, and DeepSeek through one consistent API. Switch providers by 
+changing the model name — no other code changes required.
+
+
+HOW TO INSTALL
+---------------
+
+pip install TeaLow
+
+Or install from source:
+
+git clone https://github.com/tealow/tealow.git
+cd tealow
+pip install -e ".[dev]"
+
+Requires Python 3.9 or higher.
+
+
+HOW TO USE
+-----------
+
+1. Basic usage
+
+from TeaLow import TeaLow
+
+ai = TeaLow(
+    model="gemini-2.5-flash",
+    api="YOUR_API_KEY"
+)
+
+response = ai.send("Hello!")
+print(response)
+
+The same code works for any provider — just change the model and key:
+
+ai = TeaLow(model="gpt-4o-mini", api="YOUR_OPENAI_KEY")
+ai = TeaLow(model="claude-sonnet-4-6", api="YOUR_ANTHROPIC_KEY")
+ai = TeaLow(model="deepseek-chat", api="YOUR_DEEPSEEK_KEY")
+
+
+2. Using environment variables (no need to pass api=)
+
+export OPENAI_API_KEY="sk-..."
+
+from TeaLow import TeaLow
+
+ai = TeaLow(model="gpt-4o-mini")
+print(ai.send("Hello!"))
+
+
+3. Conversation history (multi-turn)
+
+ai = TeaLow(model="claude-sonnet-4-6", api="YOUR_KEY", system_prompt="You are a helpful pirate.")
+
+ai.send("What's your name?")
+ai.send("What did I just ask you?")
+
+for message in ai.history:
+    print(message["role"], "->", message["content"])
+
+
+4. Streaming responses
+
+for chunk in ai.stream("Write a haiku about the ocean."):
+    print(chunk.delta, end="", flush=True)
+
+
+5. Async usage
+
+import asyncio
+from TeaLow import AsyncTeaLow
+
+async def main():
+    ai = AsyncTeaLow(model="gemini-2.5-flash", api="YOUR_KEY")
+    response = await ai.send("Hello from asyncio!")
+    print(response)
+
+    async for chunk in ai.stream("Tell me a joke."):
+        print(chunk.delta, end="")
+
+    await ai.close()
+
+asyncio.run(main())
+
+
+6. Vision (image input)
+
+ai = TeaLow(model="gpt-4o-mini", api="YOUR_KEY")
+image = TeaLow.load_image(path="photo.jpg")
+response = ai.send("What is in this image?", images=[image])
+print(response)
+
+
+7. JSON mode
+
+response = ai.send(
+    "Return a JSON object with keys 'name' and 'age' for a fictional person.",
+    json_mode=True,
+)
+import json
+data = json.loads(response.text)
+
+
+8. Image generation
+
+ai = TeaLow(model="dall-e-3", api="YOUR_OPENAI_KEY")
+urls = ai.generate_image("A watercolor painting of a teapot on a low table")
+print(urls[0])
+
+
+9. Custom headers, proxy, and timeouts
+
+ai = TeaLow(
+    model="gpt-4o-mini",
+    api="YOUR_KEY",
+    timeout=30.0,
+    max_retries=5,
+    proxies={"https": "http://proxy.internal:8080"},
+    headers={"X-Org-Id": "acme-corp"},
+)
+
+
+10. Logging
+
+from TeaLow import configure_logging
+import logging
+
+configure_logging(level=logging.DEBUG)
+
+
+11. Error handling
+
+from TeaLow import TeaLow, RateLimitError, InvalidAPIKeyError, TeaLowError
+
+ai = TeaLow(model="gpt-4o-mini", api="YOUR_KEY")
+
+try:
+    response = ai.send("Hello!")
+except RateLimitError as e:
+    print("Rate limited, retry after:", e.retry_after)
+except InvalidAPIKeyError:
+    print("Your API key was rejected.")
+except TeaLowError as e:
+    print("Something else went wrong:", e)
+
+
+SUPPORTED MODELS
+-----------------
+
+Gemini    -> gemini-2.5-flash, gemini-2.5-pro          (detected by "gemini")
+OpenAI    -> gpt-4o, gpt-4o-mini, o3, dall-e-3          (detected by "gpt-", "o1/o3/o4", "dall-e")
+Anthropic -> claude-sonnet-4-6, claude-opus-4-8         (detected by "claude")
+DeepSeek  -> deepseek-chat, deepseek-reasoner           (detected by "deepseek")
+
+
+CREDITS
+--------
+
+TeaLow was designed and built by Hazik Mir.
+
+Portfolio / Website: https://hazik-mir.github.io/
+
+Copyright © 2025 Hazik Mir and TeaLow Contributors.
+Released under the MIT License.
